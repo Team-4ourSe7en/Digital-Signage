@@ -1,40 +1,43 @@
 .header-container {
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    justify-content: space-between;
+    align-items: flex-start;
     background-color: #333;
     color: white;
     padding: 20px;
-}
-.info-bar {
     width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 1.5rem;
-    padding: 10px;
     box-sizing: border-box;
-    border-bottom: #333 solid 2px;
-    
 }
-.clock-container {
-    width: 100%;
+.header-left {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
+    gap: 15px;
+    max-width: 60%;
+}
+.header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    max-width: 35%;
+}
+.clock-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
     justify-content: center;
     gap: 20px;
     padding: 6px;
 }
 .clock {
-    font-size: 10rem;
+    font-size: 4rem;
     letter-spacing: -2px;
     line-height: 1;
     margin-bottom: 20px;
 
 }
 .timezone-select {
-    font-size: 1.5rem;
+    font-size: 20px;
     padding: 10px 20px;
 }
 .ticker-wrapper-news {
