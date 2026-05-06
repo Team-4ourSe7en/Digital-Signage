@@ -140,8 +140,6 @@ async function fetchRSS(url, targetElement) {
     }
     return { items, source };
 }
-    }
-}
 
 function loadCustomFeed(url, targetElement) {
     targetElement.innerHTML = '<div class="ticker-item">Loading feed...</div>';
