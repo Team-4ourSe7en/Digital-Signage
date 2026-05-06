@@ -113,13 +113,14 @@ async function loadCustomFeed(url, targetElement) {
     try {
         const fullProxyUrl = addProxy(url);
         const response = await fetch(fullProxyUrl);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
         const data = await response.json();
+        
         if (data.status !== "ok") {
-            throw new Error(data.error || "Feed error");
+            const errorMsg = data.error || "Not a valid RSS feed";
+            targetElement.innerHTML = `<div class="ticker-item">Error: Invalid RSS feed</div>`;
+            return;
         }
+        
         const items = data.items || [];
         if (items.length === 0) {
             targetElement.innerHTML = '<div class="ticker-item">No articles found</div>';
@@ -129,8 +130,14 @@ async function loadCustomFeed(url, targetElement) {
         targetElement.innerHTML = renderArticles(items.slice(0, 5), source, 0);
     } catch (err) {
         console.error("Feed load error:", err);
-        targetElement.innerHTML = `<div class="ticker-item">Failed: ${err.message}</div>`;
+        targetElement.innerHTML = `<div class="ticker-item">Failed to load feed</div>`;
     }
+}
+
+function isValidRssUrl(url) {
+    const rssExtensions = [".rss", ".xml", "rss", "feed", "atom"];
+    const lowerUrl = url.toLowerCase();
+    return rssExtensions.some(ext => lowerUrl.includes(ext));
 }
 
 // Try each feed in order until one succeeds, then start cycling its items.
@@ -174,9 +181,15 @@ function startSignage() {
 
     function handleCustomFeedLoad() {
         const url = customRssInput.value.trim();
-        if (url) {
-            loadCustomFeed(url, customFeedTarget);
+        if (!url) {
+            customFeedTarget.innerHTML = '<div class="ticker-item">Please enter a URL</div>';
+            return;
         }
+        if (!isValidRssUrl(url)) {
+            customFeedTarget.innerHTML = '<div class="ticker-item">Please enter a valid RSS feed URL</div>';
+            return;
+        }
+        loadCustomFeed(url, customFeedTarget);
     }
 
     if (loadCustomBtn) {
