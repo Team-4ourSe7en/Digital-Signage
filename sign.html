@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Digital Signage</title>
     <link rel="stylesheet" href="sign.css">
+    <link rel="stylesheet" href="weather.css">
 </head>
 <body>
     <header class="header-container">
@@ -26,6 +27,10 @@
         </div>
     </header>
     <div class="content">
+        <div class="forecast" id="weather-forecast">
+            <div class="forecast-loading">Loading forecast...</div>
+        </div>
+        <br>
         <div class="ticker-wrapper-news">
             <div class="ticker-wrapper">
                 <div class="ticker-track" id="newsFeed" >
@@ -58,5 +63,6 @@
         </div>
     </div>
     <script src="sign.js"></script>
+    <script src="weather.js"></script>
 </body>
 </html>
