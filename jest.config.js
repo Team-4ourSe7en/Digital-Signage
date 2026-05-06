@@ -1,6 +1,7 @@
 module.exports = {
-    testEnvironment: 'node',
-    testMatch: ['**/*.test.js'],
-    coverageDirectory: 'coverage',
+    testEnvironment: "jsdom",
+    testMatch: ["**/*.test.js"],
+    collectCoverageFrom: ["weather.js", "sign.js"],
+    coverageDirectory: "coverage",
     passWithNoTests: true,
 };
