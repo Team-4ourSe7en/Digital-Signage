@@ -17,50 +17,6 @@ function addProxy(url) {
     return `https://api.rss2json.com/v1/api.json?apikey=${RSS2JSON_KEY}&rss_url=${encodeURIComponent(url)}`;
 }
 
-const PROXY_OPTIONS = [
-    (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-    (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    (url) => `https://api.rss2json.com/v1/api.json?apikey=${RSS2JSON_KEY}&rss_url=${encodeURIComponent(url)}`,
-];
-
-async function fetchCustomFeed(url) {
-    for (const proxyFn of PROXY_OPTIONS) {
-        try {
-            const proxyUrl = proxyFn(url);
-            const response = await fetch(proxyUrl);
-            if (!response.ok) continue;
-            
-            const text = await response.text();
-            
-            if (proxyFn === PROXY_OPTIONS[2]) {
-                const data = JSON.parse(text);
-                if (data.status === "ok") return data;
-            } else {
-                if (text.includes("<rss") || text.includes("<feed")) {
-                    const parser = new DOMParser();
-                    const xml = parser.parseFromString(text, "text/xml");
-                    const items = xml.querySelectorAll("item, entry");
-                    if (items.length > 0) {
-                        return {
-                            status: "ok",
-                            items: Array.from(items).slice(0, 10).map(item => ({
-                                title: item.querySelector("title")?.textContent || "",
-                                link: item.querySelector("link")?.textContent || "",
-                                description: item.querySelector("description, summary, content")?.textContent || "",
-                                pubDate: item.querySelector("pubDate, published")?.textContent || ""
-                            })),
-                            feed: { title: xml.querySelector("channel > title, feed > title")?.textContent || "" }
-                        };
-                    }
-                }
-            }
-        } catch {
-            continue;
-        }
-    }
-    throw new Error("All proxies failed");
-}
-
 function formatTime(date, timezone) {
     return new Intl.DateTimeFormat("en-US", {
         timeZone: timezone,
@@ -147,24 +103,6 @@ function startCycling(items, source, targetElement, intervalMs = CYCLE_MS) {
     }, intervalMs);
 }
 
-async function loadCustomFeed(url, targetElement) {
-    targetElement.innerHTML = '<div class="ticker-item">Loading feed...</div>';
-    
-    try {
-        const data = await fetchCustomFeed(url);
-        
-        if (data.status === "ok" && data.items && data.items.length > 0) {
-            const source = (data.feed && data.feed.title) || "";
-            targetElement.innerHTML = renderArticles(data.items.slice(0, 5), source, 0);
-        } else {
-            targetElement.innerHTML = '<div class="ticker-item">No articles found</div>';
-        }
-    } catch (err) {
-        console.error("Feed error:", err);
-        targetElement.innerHTML = '<div class="ticker-item">Feed unavailable</div>';
-    }
-}
-
 async function loadFirstWorkingFeed(feeds, targetElement) {
     for (const url of feeds) {
         try {
@@ -175,6 +113,25 @@ async function loadFirstWorkingFeed(feeds, targetElement) {
             continue;
         }
     }
+}
+
+function loadCustomFeed(url, targetElement) {
+    targetElement.innerHTML = '<div class="ticker-item">Loading feed...</div>';
+    
+    fetch(addProxy(url))
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "ok" && data.items && data.items.length > 0) {
+                const source = (data.feed && data.feed.title) || "";
+                targetElement.innerHTML = renderArticles(data.items.slice(0, 5), source, 0);
+            } else {
+                targetElement.innerHTML = '<div class="ticker-item">No articles available</div>';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            targetElement.innerHTML = '<div class="ticker-item">Feed unavailable</div>';
+        });
 }
 
 function startSignage() {
