@@ -18,14 +18,33 @@ function addProxy(url) {
 }
 
 async function fetchCustomFeed(url) {
-    const response = await fetch(addProxy(url));
-    if (!response.ok) {
-        const altUrl = `https://api.rss2json.com/v1/api.json?api_key=${RSS2JSON_KEY}&rss_url=${encodeURIComponent(url)}`;
-        const altResponse = await fetch(altUrl);
-        if (!altResponse.ok) throw new Error(`HTTP ${altResponse.status}`);
-        return await altResponse.json();
-    }
-    return await response.json();
+    try {
+        const proxyUrl = `https://api.rss2json.com/v1/api.json?apikey=${RSS2JSON_KEY}&rss_url=${encodeURIComponent(url)}`;
+        const response = await fetch(proxyUrl);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.status === "ok") return data;
+        }
+    } catch {}
+
+    const googleProxy = `https://ajax.googleapis.com/ajax/services/feed/load?v=1.0&num=10&q=${encodeURIComponent(url)}&fields=feed/entry(title,link,description,publishedDate)`;
+    const response = await fetch(googleProxy);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    
+    const googleData = await response.json();
+    if (googleData.responseStatus !== 200) throw new Error("Google proxy failed");
+    
+    const entries = googleData.responseData?.feed?.entries || [];
+    return {
+        status: "ok",
+        items: entries.map(e => ({
+            title: e.title || "",
+            link: e.link || "",
+            description: e.contentSnippet || e.content || "",
+            pubDate: e.publishedDate || ""
+        })),
+        feed: { title: googleData.responseData?.feed?.title || "" }
+    };
 }
 
 function formatTime(date, timezone) {
