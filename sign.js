@@ -111,14 +111,25 @@ function startCycling(items, source, targetElement, intervalMs = CYCLE_MS) {
 async function loadCustomFeed(url, targetElement) {
     targetElement.innerHTML = '<div class="ticker-item">Loading feed...</div>';
     try {
-        const { items, source } = await fetchFeed(url);
+        const fullProxyUrl = addProxy(url);
+        const response = await fetch(fullProxyUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.status !== "ok") {
+            throw new Error(data.error || "Feed error");
+        }
+        const items = data.items || [];
         if (items.length === 0) {
             targetElement.innerHTML = '<div class="ticker-item">No articles found</div>';
             return;
         }
+        const source = (data.feed && data.feed.title) || "";
         targetElement.innerHTML = renderArticles(items.slice(0, 5), source, 0);
-    } catch {
-        targetElement.innerHTML = '<div class="ticker-item">Failed to load feed</div>';
+    } catch (err) {
+        console.error("Feed load error:", err);
+        targetElement.innerHTML = `<div class="ticker-item">Failed: ${err.message}</div>`;
     }
 }
 
