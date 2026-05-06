@@ -30,41 +30,51 @@ function formatDate(date) {
     return date.toLocaleDateString(undefined, options);
 }
 
-function buildArticleHTML(item) {
-    return `
-            <a href="${item.link}" target="_blank" style="display:block; margin-bottom: 8px;">
-                <strong>${item.title}</strong>
-            </a>
-            `;
+function buildArticleSummary(item) {
+    const title = item.title || "Untitled";
+    let summary = title;
+    if (item.description) {
+        const textOnly = item.description.replace(/<[^>]*>/g, "").trim();
+        if (textOnly.length > 0) {
+            summary = textOnly.length > 200 ? textOnly.substring(0, 200) + "..." : textOnly;
+        }
+    }
+    return `<strong>${title}</strong><p class="article-summary">${summary}</p>`;
 }
 
-async function fetchRSS(url, targetElement) {
+async function fetchFeed(url) {
     const response = await fetch(addProxy(url));
-    if (!response.ok) {
-        throw new Error(`HTTP error: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    if (data.status !== "ok") {
-        throw new Error("Feed returned bad status");
-    }
-    targetElement.innerHTML = "";
-    data.items.forEach((item) => {
-        const article = document.createElement("div");
-        article.innerHTML = buildArticleHTML(item);
-        targetElement.appendChild(article);
-    });
+    if (data.status !== "ok") throw new Error("Feed error");
+    return data.items || [];
 }
 
-// Try each feed in order until one succeeds.
-async function loadFirstWorkingFeed(feeds, targetElement) {
+async function fetchAllArticles(feeds, maxItems) {
+    const allArticles = [];
     for (const url of feeds) {
         try {
-            await fetchRSS(url, targetElement);
-            return;
+            const items = await fetchFeed(url);
+            allArticles.push(...items);
         } catch {
             continue;
         }
     }
+    return allArticles.slice(0, maxItems);
+}
+
+function renderArticles(articles, targetElement) {
+    if (articles.length === 0) {
+        targetElement.innerHTML = '<div class="feed-item">No articles available</div>';
+        return;
+    }
+    targetElement.innerHTML = "";
+    articles.forEach((item) => {
+        const div = document.createElement("div");
+        div.className = "feed-item";
+        div.innerHTML = buildArticleSummary(item);
+        targetElement.appendChild(div);
+    });
 }
 
 function startSignage() {
@@ -85,17 +95,23 @@ function startSignage() {
     updateDate();
 
     const newsTarget = document.getElementById("newsFeed");
-    const marketTarget = document.getElementById("marketFeed");
-    if (newsTarget) loadFirstWorkingFeed(NEWS_FEEDS, newsTarget);
-    if (marketTarget) loadFirstWorkingFeed(MARKET_FEEDS, marketTarget);
+    if (newsTarget) {
+        Promise.all([
+            fetchAllArticles(NEWS_FEEDS, 3),
+            fetchAllArticles(MARKET_FEEDS, 3),
+        ]).then(([news, market]) => {
+            const combined = [...news, ...market];
+            renderArticles(combined, newsTarget);
+        }).catch(() => {
+            newsTarget.innerHTML = '<div class="feed-item">Unable to load articles</div>';
+        });
+    }
 }
 
-/* istanbul ignore next */
 if (typeof document !== "undefined" && typeof window !== "undefined" && !window.__JEST__) {
     document.addEventListener("DOMContentLoaded", startSignage);
 }
 
-/* istanbul ignore else */
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         RSS2JSON_KEY,
@@ -104,9 +120,10 @@ if (typeof module !== "undefined" && module.exports) {
         addProxy,
         formatTime,
         formatDate,
-        buildArticleHTML,
-        fetchRSS,
-        loadFirstWorkingFeed,
+        buildArticleSummary,
+        fetchFeed,
+        fetchAllArticles,
+        renderArticles,
         startSignage,
     };
 }

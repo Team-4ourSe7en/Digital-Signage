@@ -100,7 +100,19 @@ body {
 }
 
 .feed-item {
-    padding: 8px 0;
+    padding: 12px 0;
+    border-bottom: 1px solid #333;
+}
+
+.feed-item:last-child {
+    border-bottom: none;
+}
+
+.article-summary {
+    font-size: 0.95rem;
+    color: #aaa;
+    margin: 6px 0 0 0;
+    line-height: 1.4;
 }
 
 .feed-placeholder {
