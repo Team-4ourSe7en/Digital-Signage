@@ -10,6 +10,9 @@ const MARKET_FEEDS = [
     "https://finance.yahoo.com/news/rss",
 ];
 
+const VISIBLE_COUNT = 3;
+const CYCLE_MS = 20000;
+
 function addProxy(url) {
     const proxyPrefix = `https://api.rss2json.com/v1/api.json?api_key=${RSS2JSON_KEY}&rss_url=`;
     return `${proxyPrefix}${encodeURIComponent(url)}`;
@@ -30,15 +33,54 @@ function formatDate(date) {
     return date.toLocaleDateString(undefined, options);
 }
 
-function buildArticleHTML(item) {
-    return `
-            <a href="${item.link}" target="_blank" style="display:block; margin-bottom: 8px;">
-                <strong>${item.title}</strong>
-            </a>
-            `;
+// Returns a short relative-time label like "3H AGO" / "5M AGO" / "JUST NOW".
+function formatTimeAgo(pubDate) {
+    if (!pubDate) return "";
+    const date = new Date(pubDate);
+    if (isNaN(date.getTime())) return "";
+    const diffMs = Date.now() - date.getTime();
+    const minutes = Math.floor(diffMs / 60000);
+    const hours = Math.floor(diffMs / 3600000);
+    const days = Math.floor(diffMs / 86400000);
+    if (days > 0) return `${days}D AGO`;
+    if (hours > 0) return `${hours}H AGO`;
+    if (minutes > 0) return `${minutes}M AGO`;
+    return "JUST NOW";
 }
 
-async function fetchRSS(url, targetElement) {
+function buildArticleHTML(item, index, source) {
+    const num = String(index).padStart(2, "0");
+    const timeAgo = formatTimeAgo(item.pubDate);
+    const sourceLabel = source ? source.toUpperCase() : "";
+    const metaParts = [];
+    if (sourceLabel) metaParts.push(`<span class="news-source">${sourceLabel}</span>`);
+    if (timeAgo) metaParts.push(`<span class="news-time">${timeAgo}</span>`);
+    const meta = metaParts.join(`<span class="news-divider">·</span>`);
+
+    return `
+        <a href="${item.link}" target="_blank" class="news-article">
+            <span class="news-num">${num}</span>
+            <div class="news-content">
+                <h3 class="news-title">${item.title}</h3>
+                <div class="news-meta">${meta}</div>
+            </div>
+        </a>
+    `;
+}
+
+// Renders VISIBLE_COUNT articles starting at offset, wrapping around the end
+// of the items array so cycling is endless even with short feeds.
+function renderArticles(items, source, offset) {
+    if (!items.length) return "";
+    let html = "";
+    for (let i = 0; i < VISIBLE_COUNT; i++) {
+        const item = items[(offset + i) % items.length];
+        html += buildArticleHTML(item, i + 1, source);
+    }
+    return html;
+}
+
+async function fetchFeed(url) {
     const response = await fetch(addProxy(url));
     if (!response.ok) {
         throw new Error(`HTTP error: ${response.status}`);
@@ -47,19 +89,31 @@ async function fetchRSS(url, targetElement) {
     if (data.status !== "ok") {
         throw new Error("Feed returned bad status");
     }
-    targetElement.innerHTML = "";
-    data.items.forEach((item) => {
-        const article = document.createElement("div");
-        article.innerHTML = buildArticleHTML(item);
-        targetElement.appendChild(article);
-    });
+    return { items: data.items || [], source: (data.feed && data.feed.title) || "" };
 }
 
-// Try each feed in order until one succeeds.
+async function fetchRSS(url, targetElement) {
+    const { items, source } = await fetchFeed(url);
+    targetElement.innerHTML = renderArticles(items, source, 0);
+    return { items, source };
+}
+
+// Rotates the visible 3 articles every intervalMs, wrapping at the end.
+function startCycling(items, source, targetElement, intervalMs = CYCLE_MS) {
+    if (items.length <= VISIBLE_COUNT) return null;
+    let offset = VISIBLE_COUNT;
+    return setInterval(() => {
+        targetElement.innerHTML = renderArticles(items, source, offset);
+        offset = (offset + VISIBLE_COUNT) % items.length;
+    }, intervalMs);
+}
+
+// Try each feed in order until one succeeds, then start cycling its items.
 async function loadFirstWorkingFeed(feeds, targetElement) {
     for (const url of feeds) {
         try {
-            await fetchRSS(url, targetElement);
+            const { items, source } = await fetchRSS(url, targetElement);
+            startCycling(items, source, targetElement);
             return;
         } catch {
             continue;
@@ -101,11 +155,17 @@ if (typeof module !== "undefined" && module.exports) {
         RSS2JSON_KEY,
         NEWS_FEEDS,
         MARKET_FEEDS,
+        VISIBLE_COUNT,
+        CYCLE_MS,
         addProxy,
         formatTime,
         formatDate,
+        formatTimeAgo,
         buildArticleHTML,
+        renderArticles,
+        fetchFeed,
         fetchRSS,
+        startCycling,
         loadFirstWorkingFeed,
         startSignage,
     };

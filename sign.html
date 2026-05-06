@@ -4,64 +4,62 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Digital Signage</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="sign.css">
     <link rel="stylesheet" href="weather.css">
 </head>
 <body>
-    <header class="header-container">
-        <div class="header-left">
-            <div id="date-display" class="dateText">Loading Date...</div>
-            <div class="clock-container">
+    <div class="grid-bg" aria-hidden="true"></div>
+
+    <main>
+        <div class="top-row">
+            <div class="time-card">
+                <div class="card-corners" aria-hidden="true"></div>
+                <div id="date-display" class="dateText">Loading Date...</div>
                 <div class="clock" id="clockDisplay">00:00:00</div>
                 <select class="timezone-select" id="timezoneSelection">
-                    <option value="America/Los_Angeles">Pacific Time</option> 
-                    <option value="America/Denver">Mountain Time</option> 
+                    <option value="America/Los_Angeles">Pacific Time</option>
+                    <option value="America/Denver">Mountain Time</option>
                     <option value="America/Chicago">Central Time</option>
                     <option value="America/New_York">Eastern Time</option>
-                    <option value="Europe/London">GMT / London</option> 
+                    <option value="Europe/London">GMT / London</option>
                 </select>
             </div>
-        </div>
-        <div class="header-right">
-            <div id="weather-display" class="weather-widget">Loading forecast...</div>
-        </div>
-    </header>
-    <div class="content">
-        <div class="forecast" id="weather-forecast">
-            <div class="forecast-loading">Loading forecast...</div>
-        </div>
-        <br>
-        <div class="ticker-wrapper-news">
-            <div class="ticker-wrapper">
-                <div class="ticker-track" id="newsFeed" >
-                    <div class="ticker-item">Loading Headlines...</div>
-                    <!--RSS news--> 
-                </div>
-                <hr>
-            </div>
-        </div>
-        <br>
-        <br>
-        <br>
-        <div class="ticker-wrapper-market">
-            <div class="ticker-track" id="marketFeed">
-                <!--RSS market--> 
-                <span>RSS Feed Here (Fixed Market)</span>
-            </div>
-            <hr>
-        </div>
-        <br>
-        <br>
-        <br>
-        <div class="ticker-wrapper-custom">
-            <div class="ticker-track" id="customFeed">
-                <!--user choice--> 
-                <span>RSS Feed Here (Variable Feed)</span>
+            <div class="forecast" id="weather-forecast">
+                <div class="card-corners" aria-hidden="true"></div>
+                <div class="forecast-loading">Loading weather…</div>
             </div>
         </div>
 
+        <div class="content">
+            <div class="ticker-wrapper-news">
+                <div class="card-corners" aria-hidden="true"></div>
+                <h2 class="section-title">News</h2>
+                <div class="ticker-track" id="newsFeed">
+                    <div class="ticker-item">Loading headlines…</div>
+                </div>
+            </div>
+
+            <div class="ticker-wrapper-market">
+                <div class="card-corners" aria-hidden="true"></div>
+                <h2 class="section-title">Markets</h2>
+                <div class="ticker-track" id="marketFeed">
+                    <div class="ticker-item">Loading market feed…</div>
+                </div>
+            </div>
+
+            <div class="ticker-wrapper-custom">
+                <div class="card-corners" aria-hidden="true"></div>
+                <h2 class="section-title">Featured</h2>
+                <div class="ticker-track" id="customFeed">
+                    <div class="ticker-item">Loading featured feed…</div>
+                </div>
+            </div>
         </div>
-    </div>
+    </main>
+
     <script src="sign.js"></script>
     <script src="weather.js"></script>
 </body>
