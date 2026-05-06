@@ -7,7 +7,7 @@ const NEWS_FEEDS = [
     "https://finance.yahoo.com/news/rss",
 ];
 
-const VISIBLE_COUNT = 3;
+const VISIBLE_COUNT = 5;
 const CYCLE_MS = 20000;
 
 function addProxy(url) {
@@ -51,6 +51,10 @@ function buildArticleHTML(item, index, source) {
     if (sourceLabel) metaParts.push(`<span class="news-source">${sourceLabel}</span>`);
     if (timeAgo) metaParts.push(`<span class="news-time">${timeAgo}</span>`);
     const meta = metaParts.join(`<span class="news-divider">·</span>`);
+    
+    const description = item.description || item.content || '';
+    const cleanDesc = description.replace(/<[^>]*>/g, '').trim();
+    const summary = cleanDesc.length > 0 ? `<p class="article-summary">${cleanDesc.substring(0, 180)}${cleanDesc.length > 180 ? '...' : ''}</p>` : '';
 
     return `
         <a href="${item.link}" target="_blank" class="news-article">
@@ -58,6 +62,7 @@ function buildArticleHTML(item, index, source) {
             <div class="news-content">
                 <h3 class="news-title">${item.title}</h3>
                 <div class="news-meta">${meta}</div>
+                ${summary}
             </div>
         </a>
     `;
