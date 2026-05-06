@@ -10,6 +10,13 @@ const MARKET_FEEDS = [
     "https://finance.yahoo.com/news/rss",
 ];
 
+const ALL_NEWS_FEEDS = [
+    "https://feeds.npr.org/1001/rss.xml",
+    "https://feeds.bbci.co.uk/news/rss.xml",
+    "https://www.investing.com/rss/news_25.rss",
+    "https://finance.yahoo.com/news/rss",
+];
+
 const VISIBLE_COUNT = 3;
 const CYCLE_MS = 20000;
 
@@ -150,13 +157,11 @@ function startSignage() {
     updateDate();
 
     const newsTarget = document.getElementById("newsFeed");
-    const marketTarget = document.getElementById("marketFeed");
     const customFeedTarget = document.getElementById("customFeed");
     const customRssInput = document.getElementById("customRssUrl");
     const loadCustomBtn = document.getElementById("loadCustomFeed");
 
-    if (newsTarget) loadFirstWorkingFeed(NEWS_FEEDS, newsTarget);
-    if (marketTarget) loadFirstWorkingFeed(MARKET_FEEDS, marketTarget);
+    if (newsTarget) loadFirstWorkingFeed(ALL_NEWS_FEEDS, newsTarget);
 
     function handleCustomFeedLoad() {
         const url = customRssInput.value.trim();
@@ -196,8 +201,7 @@ if (typeof document !== "undefined" && typeof window !== "undefined" && !window.
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         RSS2JSON_KEY,
-        NEWS_FEEDS,
-        MARKET_FEEDS,
+        ALL_NEWS_FEEDS,
         VISIBLE_COUNT,
         CYCLE_MS,
         addProxy,
