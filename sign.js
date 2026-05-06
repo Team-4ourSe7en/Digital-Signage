@@ -2,7 +2,7 @@ const RSS2JSON_KEY = "wuw4rxqjg1nthslkkjckgnvuewudnbe0robixltc";
 
 const TOPIC_FEEDS = {
     world: {
-        title: "World News",
+        title: "World",
         feeds: [
             "https://feeds.bbci.co.uk/news/rss.xml",
             "https://feeds.npr.org/1001/rss.xml"
@@ -15,7 +15,7 @@ const TOPIC_FEEDS = {
             "https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml"
         ]
     },
-    market: {
+    stock: {
         title: "Stock Market",
         feeds: [
             "https://www.investing.com/rss/news_25.rss",
@@ -109,6 +109,44 @@ function renderArticles(items, source, offset) {
     return html;
 }
 
+function renderArticlesWithTags(items, offset) {
+    if (!items.length) return "";
+    let html = "";
+    for (let i = 0; i < Math.min(VISIBLE_COUNT, items.length); i++) {
+        const item = items[(offset + i) % items.length];
+        html += buildArticleHTMLWithTag(item, i + 1);
+    }
+    return html;
+}
+
+function buildArticleHTMLWithTag(item, index) {
+    const num = String(index).padStart(2, "0");
+    const timeAgo = formatTimeAgo(item.pubDate);
+    const topicLabel = item.topicLabel || '';
+    const sourceLabel = item.source || '';
+    
+    const metaParts = [];
+    if (topicLabel) metaParts.push(`<span class="news-topic">${topicLabel}</span>`);
+    if (timeAgo) metaParts.push(`<span class="news-time">${timeAgo}</span>`);
+    if (sourceLabel) metaParts.push(`<span class="news-source">${sourceLabel.toUpperCase()}</span>`);
+    const meta = metaParts.join(`<span class="news-divider">·</span>`);
+    
+    const description = item.description || item.content || '';
+    const cleanDesc = description.replace(/<[^>]*>/g, '').substring(0, 200);
+    const summary = cleanDesc.length > 0 ? `<p class="article-summary">${cleanDesc}${cleanDesc.length >= 200 ? '...' : ''}</p>` : '';
+
+    return `
+        <div class="news-article">
+            <span class="news-num">${num}</span>
+            <div class="news-content">
+                <h3 class="news-title">${item.title}</h3>
+                <div class="news-meta">${meta}</div>
+                ${summary}
+            </div>
+        </div>
+    `;
+}
+
 async function fetchFeed(url) {
     const response = await fetch(addProxy(url));
     if (!response.ok) {
@@ -182,13 +220,33 @@ function startSignage() {
     setInterval(updateDate, 3600000);
     updateDate();
 
-    Object.keys(TOPIC_FEEDS).forEach(topic => {
-        const targetId = topic + 'Feed';
-        const target = document.getElementById(targetId);
-        if (target) {
-            loadFirstWorkingFeed(TOPIC_FEEDS[topic].feeds, target);
-        }
-    });
+    const newsTarget = document.getElementById("newsFeed");
+    if (newsTarget) {
+        newsTarget.innerHTML = '<div class="ticker-item">Loading headlines…</div>';
+        Promise.all(
+            Object.keys(TOPIC_FEEDS).map(topic => 
+                loadFirstWorkingFeed(TOPIC_FEEDS[topic].feeds, null)
+                    .then(result => result ? { ...result, topic } : null)
+                    .catch(() => null)
+            )
+        ).then(results => {
+            const allItems = results
+                .filter(r => r && r.items.length > 0)
+                .map(r => ({
+                    ...r,
+                    topicLabel: TOPIC_FEEDS[r.topic]?.title || r.topic
+                }));
+            
+            if (allItems.length > 0) {
+                const shuffled = allItems.sort(() => Math.random() - 0.5);
+                const shuffledItems = shuffled.flatMap(r => r.items.map(item => ({
+                    ...item,
+                    topicLabel: r.topicLabel
+                })));
+                newsTarget.innerHTML = renderArticlesWithTags(shuffledItems.slice(0, 10), 0);
+            }
+        });
+    }
 
     const customFeedTarget = document.getElementById("customFeed");
     const customRssInput = document.getElementById("customRssUrl");
@@ -239,8 +297,9 @@ if (typeof module !== "undefined" && module.exports) {
         formatTime,
         formatDate,
         formatTimeAgo,
-        buildArticleHTML,
+        buildArticleHTMLWithTag,
         renderArticles,
+        renderArticlesWithTags,
         fetchFeed,
         fetchRSS,
         startCycling,
