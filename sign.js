@@ -1,7 +1,5 @@
 const RSS2JSON_KEY = "wuw4rxqjg1nthslkkjckgnvuewudnbe0robixltc";
 
-const PROXY_URL = "https://api.allorigins.win/raw?url=";
-
 const NEWS_FEEDS = [
     "https://feeds.npr.org/1001/rss.xml",
     "https://feeds.bbci.co.uk/news/rss.xml",
@@ -12,24 +10,12 @@ const MARKET_FEEDS = [
     "https://finance.yahoo.com/news/rss",
 ];
 
-function addProxy(url) {
-    return PROXY_URL + encodeURIComponent(url);
-}
+const VISIBLE_COUNT = 3;
+const CYCLE_MS = 20000;
 
-async function parseRss(xmlText) {
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(xmlText, "text/xml");
-    const items = xml.querySelectorAll("item");
-    const feedTitle = xml.querySelector("channel > title")?.textContent || "";
-    
-    const articles = Array.from(items).slice(0, 20).map(item => ({
-        title: item.querySelector("title")?.textContent || "",
-        link: item.querySelector("link")?.textContent || "",
-        description: item.querySelector("description, summary")?.textContent || "",
-        pubDate: item.querySelector("pubDate")?.textContent || ""
-    }));
-    
-    return { items: articles, source: feedTitle };
+function addProxy(url) {
+    const proxyPrefix = `https://api.rss2json.com/v1/api.json?api_key=${RSS2JSON_KEY}&rss_url=`;
+    return `${proxyPrefix}${encodeURIComponent(url)}`;
 }
 
 function formatTime(date, timezone) {
@@ -47,7 +33,6 @@ function formatDate(date) {
     return date.toLocaleDateString(undefined, options);
 }
 
-// Returns a short relative-time label like "3H AGO" / "5M AGO" / "JUST NOW".
 function formatTimeAgo(pubDate) {
     if (!pubDate) return "";
     const date = new Date(pubDate);
@@ -82,8 +67,6 @@ function buildArticleHTML(item, index, source) {
     `;
 }
 
-// Renders VISIBLE_COUNT articles starting at offset, wrapping around the end
-// of the items array so cycling is endless even with short feeds.
 function renderArticles(items, source, offset) {
     if (!items.length) return "";
     let html = "";
@@ -95,25 +78,15 @@ function renderArticles(items, source, offset) {
 }
 
 async function fetchFeed(url) {
-    try {
-        const response = await fetch(addProxy(url));
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        const xmlText = await response.text();
-        return parseRss(xmlText);
-    } catch {
-        const proxyUrl = `https://api.rss2json.com/v1/api.json?api_key=${RSS2JSON_KEY}&rss_url=${encodeURIComponent(url)}`;
-        const response = await fetch(proxyUrl);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        const data = await response.json();
-        if (data.status !== "ok") {
-            throw new Error("Feed error");
-        }
-        return { items: data.items || [], source: (data.feed && data.feed.title) || "" };
+    const response = await fetch(addProxy(url));
+    if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
     }
+    const data = await response.json();
+    if (data.status !== "ok") {
+        throw new Error("Feed returned bad status");
+    }
+    return { items: data.items || [], source: (data.feed && data.feed.title) || "" };
 }
 
 async function fetchRSS(url, targetElement) {
@@ -122,7 +95,6 @@ async function fetchRSS(url, targetElement) {
     return { items, source };
 }
 
-// Rotates the visible 3 articles every intervalMs, wrapping at the end.
 function startCycling(items, source, targetElement, intervalMs = CYCLE_MS) {
     if (items.length <= VISIBLE_COUNT) return null;
     let offset = VISIBLE_COUNT;
@@ -135,19 +107,10 @@ function startCycling(items, source, targetElement, intervalMs = CYCLE_MS) {
 async function loadCustomFeed(url, targetElement) {
     targetElement.innerHTML = '<div class="ticker-item">Loading feed...</div>';
     try {
-        const response = await fetch(addProxy(url));
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        const xmlText = await response.text();
-        
-        if (xmlText.includes("<error>") || xmlText.includes("Exception") || xmlText.trim().startsWith("{")) {
-            throw new Error("Invalid RSS");
-        }
-        
-        const { items, source } = parseRss(xmlText);
+        const { items, source } = await fetchFeed(url);
         if (items.length === 0) {
-            throw new Error("No items");
+            targetElement.innerHTML = '<div class="ticker-item">No articles found</div>';
+            return;
         }
         targetElement.innerHTML = renderArticles(items.slice(0, 5), source, 0);
     } catch (err) {
@@ -156,13 +119,6 @@ async function loadCustomFeed(url, targetElement) {
     }
 }
 
-function isValidRssUrl(url) {
-    const rssExtensions = [".rss", ".xml", "rss", "feed", "atom"];
-    const lowerUrl = url.toLowerCase();
-    return rssExtensions.some(ext => lowerUrl.includes(ext));
-}
-
-// Try each feed in order until one succeeds, then start cycling its items.
 async function loadFirstWorkingFeed(feeds, targetElement) {
     for (const url of feeds) {
         try {
@@ -203,15 +159,9 @@ function startSignage() {
 
     function handleCustomFeedLoad() {
         const url = customRssInput.value.trim();
-        if (!url) {
-            customFeedTarget.innerHTML = '<div class="ticker-item">Please enter a URL</div>';
-            return;
+        if (url) {
+            loadCustomFeed(url, customFeedTarget);
         }
-        if (!isValidRssUrl(url)) {
-            customFeedTarget.innerHTML = '<div class="ticker-item">Please enter a valid RSS feed URL</div>';
-            return;
-        }
-        loadCustomFeed(url, customFeedTarget);
     }
 
     if (loadCustomBtn) {
