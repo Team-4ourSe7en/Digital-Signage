@@ -7,11 +7,6 @@ const NEWS_FEEDS = [
     "https://finance.yahoo.com/news/rss",
 ];
 
-const MARKET_FEEDS = [
-    "https://www.investing.com/rss/news_25.rss",
-    "https://finance.yahoo.com/news/rss",
-];
-
 const VISIBLE_COUNT = 3;
 const CYCLE_MS = 20000;
 
@@ -198,7 +193,6 @@ if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         RSS2JSON_KEY,
         NEWS_FEEDS,
-        MARKET_FEEDS,
         VISIBLE_COUNT,
         CYCLE_MS,
         addProxy,
