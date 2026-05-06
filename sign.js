@@ -95,12 +95,25 @@ function renderArticles(items, source, offset) {
 }
 
 async function fetchFeed(url) {
-    const response = await fetch(addProxy(url));
-    if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+    try {
+        const response = await fetch(addProxy(url));
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const xmlText = await response.text();
+        return parseRss(xmlText);
+    } catch {
+        const proxyUrl = `https://api.rss2json.com/v1/api.json?api_key=${RSS2JSON_KEY}&rss_url=${encodeURIComponent(url)}`;
+        const response = await fetch(proxyUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.status !== "ok") {
+            throw new Error("Feed error");
+        }
+        return { items: data.items || [], source: (data.feed && data.feed.title) || "" };
     }
-    const xmlText = await response.text();
-    return parseRss(xmlText);
 }
 
 async function fetchRSS(url, targetElement) {
@@ -128,18 +141,17 @@ async function loadCustomFeed(url, targetElement) {
         }
         const xmlText = await response.text();
         
-        if (xmlText.includes("<error>") || xmlText.includes("Exception")) {
-            throw new Error("Invalid RSS feed");
+        if (xmlText.includes("<error>") || xmlText.includes("Exception") || xmlText.trim().startsWith("{")) {
+            throw new Error("Invalid RSS");
         }
         
         const { items, source } = parseRss(xmlText);
         if (items.length === 0) {
-            targetElement.innerHTML = '<div class="ticker-item">No articles found</div>';
-            return;
+            throw new Error("No items");
         }
         targetElement.innerHTML = renderArticles(items.slice(0, 5), source, 0);
     } catch (err) {
-        console.error("Feed load error:", err);
+        console.error("Feed error:", err);
         targetElement.innerHTML = '<div class="ticker-item">Failed to load feed</div>';
     }
 }
