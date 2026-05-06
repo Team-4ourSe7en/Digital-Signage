@@ -33,12 +33,37 @@
             </div>
         </div>
 
-        <div class="content">
+<div class="content">
             <div class="ticker-wrapper-news">
                 <div class="card-corners" aria-hidden="true"></div>
                 <h2 class="section-title">News</h2>
                 <div class="ticker-track" id="newsFeed">
                     <div class="ticker-item">Loading headlines…</div>
+                </div>
+            </div>
+
+            <div class="ticker-wrapper-custom">
+                <div class="card-corners" aria-hidden="true"></div>
+                <h2 class="section-title">Featured</h2>
+                <div class="custom-input-row">
+                    <input type="url" id="customRssUrl" placeholder="Enter RSS feed URL..." class="custom-rss-input">
+                    <button id="loadCustomFeed" class="custom-rss-btn">Load</button>
+                </div>
+                <div class="feed-presets">
+                    <span class="preset-label">Quick feeds:</span>
+                    <button class="preset-btn" data-url="https://feeds.bbci.co.uk/news/rss.xml">BBC News</button>
+                    <button class="preset-btn" data-url="https://feeds.npr.org/1001/rss.xml">NPR</button>
+                </div>
+                <div class="ticker-track" id="customFeed"></div>
+            </div>
+        </div>
+            </div>
+
+            <div class="ticker-wrapper-market">
+                <div class="card-corners" aria-hidden="true"></div>
+                <h2 class="section-title">Markets</h2>
+                <div class="ticker-track" id="marketFeed">
+                    <div class="ticker-item">Loading market feed…</div>
                 </div>
             </div>
 
