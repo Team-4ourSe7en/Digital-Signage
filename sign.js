@@ -18,6 +18,10 @@ function addProxy(url) {
     return `${proxyPrefix}${encodeURIComponent(url)}`;
 }
 
+function addProxyAlt(url) {
+    return `https://api.rss2json.com/v1/api.json?apikey=${RSS2JSON_KEY}&rss_url=${encodeURIComponent(url)}`;
+}
+
 function formatTime(date, timezone) {
     return new Intl.DateTimeFormat("en-US", {
         timeZone: timezone,
@@ -106,16 +110,29 @@ function startCycling(items, source, targetElement, intervalMs = CYCLE_MS) {
 
 async function loadCustomFeed(url, targetElement) {
     targetElement.innerHTML = '<div class="ticker-item">Loading feed...</div>';
-    try {
-        const { items, source } = await fetchFeed(url);
-        if (items.length === 0) {
-            targetElement.innerHTML = '<div class="ticker-item">No articles found</div>';
-            return;
+    
+    const proxies = [addProxy, addProxyAlt];
+    let success = false;
+    
+    for (const proxyFn of proxies) {
+        try {
+            const proxyUrl = proxyFn(url);
+            const response = await fetch(proxyUrl);
+            const data = await response.json();
+            
+            if (data.status === "ok" && data.items && data.items.length > 0) {
+                const source = (data.feed && data.feed.title) || "";
+                targetElement.innerHTML = renderArticles(data.items.slice(0, 5), source, 0);
+                success = true;
+                break;
+            }
+        } catch {
+            continue;
         }
-        targetElement.innerHTML = renderArticles(items.slice(0, 5), source, 0);
-    } catch (err) {
-        console.error("Feed error:", err);
-        targetElement.innerHTML = '<div class="ticker-item">Failed to load feed</div>';
+    }
+    
+    if (!success) {
+        targetElement.innerHTML = '<div class="ticker-item">Feed unavailable</div>';
     }
 }
 
