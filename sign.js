@@ -108,6 +108,20 @@ function startCycling(items, source, targetElement, intervalMs = CYCLE_MS) {
     }, intervalMs);
 }
 
+async function loadCustomFeed(url, targetElement) {
+    targetElement.innerHTML = '<div class="ticker-item">Loading feed...</div>';
+    try {
+        const { items, source } = await fetchFeed(url);
+        if (items.length === 0) {
+            targetElement.innerHTML = '<div class="ticker-item">No articles found</div>';
+            return;
+        }
+        targetElement.innerHTML = renderArticles(items.slice(0, 5), source, 0);
+    } catch {
+        targetElement.innerHTML = '<div class="ticker-item">Failed to load feed</div>';
+    }
+}
+
 // Try each feed in order until one succeeds, then start cycling its items.
 async function loadFirstWorkingFeed(feeds, targetElement) {
     for (const url of feeds) {
@@ -140,8 +154,30 @@ function startSignage() {
 
     const newsTarget = document.getElementById("newsFeed");
     const marketTarget = document.getElementById("marketFeed");
+    const customFeedTarget = document.getElementById("customFeed");
+    const customRssInput = document.getElementById("customRssUrl");
+    const loadCustomBtn = document.getElementById("loadCustomFeed");
+
     if (newsTarget) loadFirstWorkingFeed(NEWS_FEEDS, newsTarget);
     if (marketTarget) loadFirstWorkingFeed(MARKET_FEEDS, marketTarget);
+
+    function handleCustomFeedLoad() {
+        const url = customRssInput.value.trim();
+        if (url) {
+            loadCustomFeed(url, customFeedTarget);
+        }
+    }
+
+    if (loadCustomBtn) {
+        loadCustomBtn.addEventListener("click", handleCustomFeedLoad);
+    }
+    if (customRssInput) {
+        customRssInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                handleCustomFeedLoad();
+            }
+        });
+    }
 }
 
 /* istanbul ignore next */
@@ -166,6 +202,7 @@ if (typeof module !== "undefined" && module.exports) {
         fetchFeed,
         fetchRSS,
         startCycling,
+        loadCustomFeed,
         loadFirstWorkingFeed,
         startSignage,
     };

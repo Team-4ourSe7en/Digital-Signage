@@ -357,6 +357,62 @@ a {
     opacity: 0.7;
 }
 
+/* ===================== Custom RSS Input ===================== */
+
+.custom-input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.custom-rss-input {
+    flex: 1;
+    background-color: rgba(0, 240, 255, 0.04);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px 14px;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--text);
+    letter-spacing: 0.06em;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.custom-rss-input::placeholder {
+    color: var(--muted);
+    opacity: 0.7;
+}
+
+.custom-rss-input:focus {
+    outline: none;
+    border-color: var(--cyan);
+    box-shadow: 0 0 16px var(--cyan-soft);
+}
+
+.custom-rss-btn {
+    background-color: rgba(0, 240, 255, 0.08);
+    border: 1px solid var(--cyan);
+    border-radius: 3px;
+    padding: 10px 20px;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--cyan);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.custom-rss-btn:hover {
+    background-color: rgba(0, 240, 255, 0.15);
+    box-shadow: 0 0 12px var(--cyan-soft);
+}
+
+.custom-rss-btn:active {
+    background-color: rgba(0, 240, 255, 0.2);
+}
+
 /* ===================== News article cards ===================== */
 
 .news-article {
