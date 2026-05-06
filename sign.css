@@ -413,6 +413,39 @@ a {
     background-color: rgba(0, 240, 255, 0.2);
 }
 
+.feed-presets {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.preset-label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.preset-btn {
+    background-color: rgba(255, 45, 156, 0.08);
+    border: 1px solid var(--magenta);
+    border-radius: 3px;
+    padding: 6px 14px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--magenta);
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.preset-btn:hover {
+    background-color: rgba(255, 45, 156, 0.15);
+}
+
 /* ===================== News article cards ===================== */
 
 .news-article {
