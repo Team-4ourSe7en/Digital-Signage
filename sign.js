@@ -118,31 +118,55 @@ async function loadFirstWorkingFeed(feeds, targetElement) {
 function loadCustomFeed(url, targetElement) {
     targetElement.innerHTML = '<div class="ticker-item">Loading feed...</div>';
     
-    fetch(`http://localhost:3000/api/rss?url=${encodeURIComponent(url)}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'ok' && data.items && data.items.length > 0) {
-                const source = data.feed?.title || '';
-                targetElement.innerHTML = renderArticles(data.items.slice(0, 5), source, 0);
-            } else {
-                targetElement.innerHTML = '<div class="ticker-item">No articles available</div>';
-            }
-        })
-        .catch(() => {
-            fetch(addProxy(url))
-                .then(r => r.json())
-                .then(data => {
-                    if (data.status === 'ok' && data.items?.length > 0) {
-                        const source = data.feed?.title || '';
-                        targetElement.innerHTML = renderArticles(data.items.slice(0, 5), source, 0);
-                    } else {
-                        targetElement.innerHTML = '<div class="ticker-item">No articles found</div>';
+    const proxies = [
+        (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+        (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+        addProxy
+    ];
+    
+    let tried = 0;
+    
+    function tryNext() {
+        if (tried >= proxies.length) {
+            targetElement.innerHTML = '<div class="ticker-item">Feed unavailable</div>';
+            return;
+        }
+        
+        const proxyUrl = proxies[tried++](url);
+        fetch(proxyUrl)
+            .then(r => r.text())
+            .then(text => {
+                if (proxyUrl.includes('allorigins') || proxyUrl.includes('corsproxy')) {
+                    if (text.includes('<rss') || text.includes('<feed') || text.includes('<channel>')) {
+                        const parser = new DOMParser();
+                        const xml = parser.parseFromString(text, 'text/xml');
+                        const items = xml.querySelectorAll('item');
+                        const source = xml.querySelector('channel > title')?.textContent || '';
+                        if (items.length > 0) {
+                            const articles = Array.from(items).slice(0, 5).map(item => ({
+                                title: item.querySelector('title')?.textContent || '',
+                                link: item.querySelector('link')?.textContent || '',
+                                description: item.querySelector('description')?.textContent || '',
+                                pubDate: item.querySelector('pubDate')?.textContent || ''
+                            }));
+                            targetElement.innerHTML = renderArticles(articles, source, 0);
+                            return;
+                        }
                     }
-                })
-                .catch(() => {
-                    targetElement.innerHTML = '<div class="ticker-item">Failed to load feed</div>';
-                });
-        });
+                    tryNext();
+                } else {
+                    const data = JSON.parse(text);
+                    if (data.status === 'ok' && data.items?.length > 0) {
+                        targetElement.innerHTML = renderArticles(data.items.slice(0, 5), data.feed?.title || '', 0);
+                    } else {
+                        tryNext();
+                    }
+                }
+            })
+            .catch(() => tryNext());
+    }
+    
+    tryNext();
 }
 
 function startSignage() {
