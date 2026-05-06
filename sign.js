@@ -118,33 +118,18 @@ async function loadFirstWorkingFeed(feeds, targetElement) {
 function loadCustomFeed(url, targetElement) {
     targetElement.innerHTML = '<div class="ticker-item">Loading feed...</div>';
     
-    const corsProxies = [
-        (u) => `https://cors-proxy.htmldriven.com/?url=${encodeURIComponent(u)}`,
-        (u) => `https://api.rss2json.com/v1/api.json?apikey=${RSS2JSON_KEY}&rss_url=${encodeURIComponent(u)}`
-    ];
-    
-    let proxyIndex = 0;
-    
-    function tryFetch() {
-        if (proxyIndex >= corsProxies.length) {
-            targetElement.innerHTML = '<div class="ticker-item">Feed unavailable</div>';
-            return;
-        }
-        
-        const proxyUrl = corsProxies[proxyIndex++];
-        fetch(proxyUrl(url))
-            .then(r => r.json())
-            .then(data => {
-                if (data.status === 'ok' && data.items?.length > 0) {
-                    targetElement.innerHTML = renderArticles(data.items.slice(0, 5), data.feed?.title || '', 0);
-                } else {
-                    tryFetch();
-                }
-            })
-            .catch(() => tryFetch());
-    }
-    
-    tryFetch();
+    fetch(addProxy(url))
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'ok' && data.items?.length > 0) {
+                targetElement.innerHTML = renderArticles(data.items.slice(0, 5), data.feed?.title || '', 0);
+            } else {
+                targetElement.innerHTML = '<div class="ticker-item">No articles found</div>';
+            }
+        })
+        .catch(() => {
+            targetElement.innerHTML = '<div class="ticker-item">Feed unavailable (needs server)</div>';
+        });
 }
 
 function startSignage() {
