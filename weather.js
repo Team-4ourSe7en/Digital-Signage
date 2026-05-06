@@ -76,6 +76,22 @@ async function loadWeather() {
     }
 }
 
-loadWeather();
-// Refresh every 10 minutes.
-setInterval(loadWeather, 10 * 60 * 1000);
+// Browser bootstrap: auto-run in a real browser, skip in Node tests.
+/* istanbul ignore next */
+if (typeof window !== "undefined" && !window.__JEST__) {
+    loadWeather();
+    setInterval(loadWeather, 10 * 60 * 1000);
+}
+
+/* istanbul ignore else */
+if (typeof module !== "undefined" && module.exports) {
+    module.exports = {
+        FORECAST_URL,
+        fetchWeather,
+        shortDayFromISO,
+        buildDays,
+        renderCurrent,
+        renderForecast,
+        loadWeather,
+    };
+}
