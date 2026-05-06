@@ -1,21 +1,42 @@
 const RSS2JSON_KEY = "wuw4rxqjg1nthslkkjckgnvuewudnbe0robixltc";
 
-const NEWS_FEEDS = [
-    "https://feeds.npr.org/1001/rss.xml",
-    "https://feeds.bbci.co.uk/news/rss.xml",
-];
-
-const MARKET_FEEDS = [
-    "https://www.investing.com/rss/news_25.rss",
-    "https://finance.yahoo.com/news/rss",
-];
-
-const ALL_NEWS_FEEDS = [
-    "https://feeds.npr.org/1001/rss.xml",
-    "https://feeds.bbci.co.uk/news/rss.xml",
-    "https://www.investing.com/rss/news_25.rss",
-    "https://finance.yahoo.com/news/rss",
-];
+const TOPIC_FEEDS = {
+    world: {
+        title: "World News",
+        feeds: [
+            "https://feeds.bbci.co.uk/news/rss.xml",
+            "https://feeds.npr.org/1001/rss.xml"
+        ]
+    },
+    politics: {
+        title: "Politics",
+        feeds: [
+            "https://feeds.bbci.co.uk/news/politics/rss.xml",
+            "https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml"
+        ]
+    },
+    market: {
+        title: "Stock Market",
+        feeds: [
+            "https://www.investing.com/rss/news_25.rss",
+            "https://finance.yahoo.com/news/rss"
+        ]
+    },
+    culture: {
+        title: "Culture",
+        feeds: [
+            "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml",
+            "https://rss.nytimes.com/services/xml/rss/nyt/Arts.xml"
+        ]
+    },
+    science: {
+        title: "Science",
+        feeds: [
+            "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
+            "https://rss.nytimes.com/services/xml/rss/nyt/Science.xml"
+        ]
+    }
+};
 
 const VISIBLE_COUNT = 3;
 const CYCLE_MS = 20000;
@@ -61,15 +82,20 @@ function buildArticleHTML(item, index, source) {
     if (sourceLabel) metaParts.push(`<span class="news-source">${sourceLabel}</span>`);
     if (timeAgo) metaParts.push(`<span class="news-time">${timeAgo}</span>`);
     const meta = metaParts.join(`<span class="news-divider">·</span>`);
+    
+    const description = item.description || item.content || '';
+    const cleanDesc = description.replace(/<[^>]*>/g, '').substring(0, 200);
+    const summary = cleanDesc.length > 0 ? `<p class="article-summary">${cleanDesc}${cleanDesc.length >= 200 ? '...' : ''}</p>` : '';
 
     return `
-        <a href="${item.link}" target="_blank" class="news-article">
+        <div class="news-article">
             <span class="news-num">${num}</span>
             <div class="news-content">
                 <h3 class="news-title">${item.title}</h3>
                 <div class="news-meta">${meta}</div>
+                ${summary}
             </div>
-        </a>
+        </div>
     `;
 }
 
@@ -156,12 +182,17 @@ function startSignage() {
     setInterval(updateDate, 3600000);
     updateDate();
 
-    const newsTarget = document.getElementById("newsFeed");
+    Object.keys(TOPIC_FEEDS).forEach(topic => {
+        const targetId = topic + 'Feed';
+        const target = document.getElementById(targetId);
+        if (target) {
+            loadFirstWorkingFeed(TOPIC_FEEDS[topic].feeds, target);
+        }
+    });
+
     const customFeedTarget = document.getElementById("customFeed");
     const customRssInput = document.getElementById("customRssUrl");
     const loadCustomBtn = document.getElementById("loadCustomFeed");
-
-    if (newsTarget) loadFirstWorkingFeed(ALL_NEWS_FEEDS, newsTarget);
 
     function handleCustomFeedLoad() {
         const url = customRssInput.value.trim();
@@ -201,7 +232,7 @@ if (typeof document !== "undefined" && typeof window !== "undefined" && !window.
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         RSS2JSON_KEY,
-        ALL_NEWS_FEEDS,
+        TOPIC_FEEDS,
         VISIBLE_COUNT,
         CYCLE_MS,
         addProxy,
