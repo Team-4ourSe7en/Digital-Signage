@@ -1,5 +1,7 @@
 const RSS2JSON_KEY = "wuw4rxqjg1nthslkkjckgnvuewudnbe0robixltc";
 
+const PROXY_URL = "https://api.allorigins.win/raw?url=";
+
 const NEWS_FEEDS = [
     "https://feeds.npr.org/1001/rss.xml",
     "https://feeds.bbci.co.uk/news/rss.xml",
@@ -10,12 +12,24 @@ const MARKET_FEEDS = [
     "https://finance.yahoo.com/news/rss",
 ];
 
-const VISIBLE_COUNT = 3;
-const CYCLE_MS = 20000;
-
 function addProxy(url) {
-    const proxyPrefix = `https://api.rss2json.com/v1/api.json?api_key=${RSS2JSON_KEY}&rss_url=`;
-    return `${proxyPrefix}${encodeURIComponent(url)}`;
+    return PROXY_URL + encodeURIComponent(url);
+}
+
+async function parseRss(xmlText) {
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(xmlText, "text/xml");
+    const items = xml.querySelectorAll("item");
+    const feedTitle = xml.querySelector("channel > title")?.textContent || "";
+    
+    const articles = Array.from(items).slice(0, 20).map(item => ({
+        title: item.querySelector("title")?.textContent || "",
+        link: item.querySelector("link")?.textContent || "",
+        description: item.querySelector("description, summary")?.textContent || "",
+        pubDate: item.querySelector("pubDate")?.textContent || ""
+    }));
+    
+    return { items: articles, source: feedTitle };
 }
 
 function formatTime(date, timezone) {
@@ -83,13 +97,10 @@ function renderArticles(items, source, offset) {
 async function fetchFeed(url) {
     const response = await fetch(addProxy(url));
     if (!response.ok) {
-        throw new Error(`HTTP error: ${response.status}`);
+        throw new Error(`HTTP ${response.status}`);
     }
-    const data = await response.json();
-    if (data.status !== "ok") {
-        throw new Error("Feed returned bad status");
-    }
-    return { items: data.items || [], source: (data.feed && data.feed.title) || "" };
+    const xmlText = await response.text();
+    return parseRss(xmlText);
 }
 
 async function fetchRSS(url, targetElement) {
@@ -111,26 +122,25 @@ function startCycling(items, source, targetElement, intervalMs = CYCLE_MS) {
 async function loadCustomFeed(url, targetElement) {
     targetElement.innerHTML = '<div class="ticker-item">Loading feed...</div>';
     try {
-        const fullProxyUrl = addProxy(url);
-        const response = await fetch(fullProxyUrl);
-        const data = await response.json();
+        const response = await fetch(addProxy(url));
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const xmlText = await response.text();
         
-        if (data.status !== "ok") {
-            const errorMsg = data.error || "Not a valid RSS feed";
-            targetElement.innerHTML = `<div class="ticker-item">Error: Invalid RSS feed</div>`;
-            return;
+        if (xmlText.includes("<error>") || xmlText.includes("Exception")) {
+            throw new Error("Invalid RSS feed");
         }
         
-        const items = data.items || [];
+        const { items, source } = parseRss(xmlText);
         if (items.length === 0) {
             targetElement.innerHTML = '<div class="ticker-item">No articles found</div>';
             return;
         }
-        const source = (data.feed && data.feed.title) || "";
         targetElement.innerHTML = renderArticles(items.slice(0, 5), source, 0);
     } catch (err) {
         console.error("Feed load error:", err);
-        targetElement.innerHTML = `<div class="ticker-item">Failed to load feed</div>`;
+        targetElement.innerHTML = '<div class="ticker-item">Failed to load feed</div>';
     }
 }
 
