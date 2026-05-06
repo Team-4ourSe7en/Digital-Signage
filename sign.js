@@ -118,9 +118,7 @@ async function loadFirstWorkingFeed(feeds, targetElement) {
 function loadCustomFeed(url, targetElement) {
     targetElement.innerHTML = '<div class="ticker-item">Loading feed...</div>';
     
-    const proxyUrl = `http://localhost:3000/api/rss?url=${encodeURIComponent(url)}`;
-    
-    fetch(proxyUrl)
+    fetch(`http://localhost:3000/api/rss?url=${encodeURIComponent(url)}`)
         .then(response => response.json())
         .then(data => {
             if (data.status === 'ok' && data.items && data.items.length > 0) {
@@ -130,9 +128,20 @@ function loadCustomFeed(url, targetElement) {
                 targetElement.innerHTML = '<div class="ticker-item">No articles available</div>';
             }
         })
-        .catch(err => {
-            console.error(err);
-            targetElement.innerHTML = '<div class="ticker-item">Start server: npm run server</div>';
+        .catch(() => {
+            fetch(addProxy(url))
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'ok' && data.items?.length > 0) {
+                        const source = data.feed?.title || '';
+                        targetElement.innerHTML = renderArticles(data.items.slice(0, 5), source, 0);
+                    } else {
+                        targetElement.innerHTML = '<div class="ticker-item">No articles found</div>';
+                    }
+                })
+                .catch(() => {
+                    targetElement.innerHTML = '<div class="ticker-item">Failed to load feed</div>';
+                });
         });
 }
 
