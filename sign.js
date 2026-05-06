@@ -14,12 +14,18 @@ const VISIBLE_COUNT = 3;
 const CYCLE_MS = 20000;
 
 function addProxy(url) {
-    const proxyPrefix = `https://api.rss2json.com/v1/api.json?api_key=${RSS2JSON_KEY}&rss_url=`;
-    return `${proxyPrefix}${encodeURIComponent(url)}`;
+    return `https://api.rss2json.com/v1/api.json?apikey=${RSS2JSON_KEY}&rss_url=${encodeURIComponent(url)}`;
 }
 
-function addProxyAlt(url) {
-    return `https://api.rss2json.com/v1/api.json?apikey=${RSS2JSON_KEY}&rss_url=${encodeURIComponent(url)}`;
+async function fetchCustomFeed(url) {
+    const response = await fetch(addProxy(url));
+    if (!response.ok) {
+        const altUrl = `https://api.rss2json.com/v1/api.json?api_key=${RSS2JSON_KEY}&rss_url=${encodeURIComponent(url)}`;
+        const altResponse = await fetch(altUrl);
+        if (!altResponse.ok) throw new Error(`HTTP ${altResponse.status}`);
+        return await altResponse.json();
+    }
+    return await response.json();
 }
 
 function formatTime(date, timezone) {
@@ -111,27 +117,17 @@ function startCycling(items, source, targetElement, intervalMs = CYCLE_MS) {
 async function loadCustomFeed(url, targetElement) {
     targetElement.innerHTML = '<div class="ticker-item">Loading feed...</div>';
     
-    const proxies = [addProxy, addProxyAlt];
-    let success = false;
-    
-    for (const proxyFn of proxies) {
-        try {
-            const proxyUrl = proxyFn(url);
-            const response = await fetch(proxyUrl);
-            const data = await response.json();
-            
-            if (data.status === "ok" && data.items && data.items.length > 0) {
-                const source = (data.feed && data.feed.title) || "";
-                targetElement.innerHTML = renderArticles(data.items.slice(0, 5), source, 0);
-                success = true;
-                break;
-            }
-        } catch {
-            continue;
+    try {
+        const data = await fetchCustomFeed(url);
+        
+        if (data.status === "ok" && data.items && data.items.length > 0) {
+            const source = (data.feed && data.feed.title) || "";
+            targetElement.innerHTML = renderArticles(data.items.slice(0, 5), source, 0);
+        } else {
+            targetElement.innerHTML = '<div class="ticker-item">No articles found</div>';
         }
-    }
-    
-    if (!success) {
+    } catch (err) {
+        console.error("Feed error:", err);
         targetElement.innerHTML = '<div class="ticker-item">Feed unavailable</div>';
     }
 }
