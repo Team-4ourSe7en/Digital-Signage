@@ -118,37 +118,33 @@ async function loadFirstWorkingFeed(feeds, targetElement) {
 function loadCustomFeed(url, targetElement) {
     targetElement.innerHTML = '<div class="ticker-item">Loading feed...</div>';
     
-    const proxyUrl = `https://feed2json.org/convert?url=${encodeURIComponent(url)}`;
+    const corsProxies = [
+        (u) => `https://cors-proxy.htmldriven.com/?url=${encodeURIComponent(u)}`,
+        (u) => `https://api.rss2json.com/v1/api.json?apikey=${RSS2JSON_KEY}&rss_url=${encodeURIComponent(u)}`
+    ];
     
-    fetch(proxyUrl)
-        .then(r => r.json())
-        .then(data => {
-            if (data.items && data.items.length > 0) {
-                const articles = data.items.slice(0, 5).map(item => ({
-                    title: item.title || '',
-                    link: item.url || item.id || '',
-                    description: item.summary || item.content_text || item.content_html || '',
-                    pubDate: item.date_published || ''
-                }));
-                targetElement.innerHTML = renderArticles(articles, data.title || '', 0);
-            } else {
-                targetElement.innerHTML = '<div class="ticker-item">No articles found</div>';
-            }
-        })
-        .catch(() => {
-            fetch(addProxy(url))
-                .then(r => r.json())
-                .then(data => {
-                    if (data.status === 'ok' && data.items?.length > 0) {
-                        targetElement.innerHTML = renderArticles(data.items.slice(0, 5), data.feed?.title || '', 0);
-                    } else {
-                        targetElement.innerHTML = '<div class="ticker-item">Feed unavailable</div>';
-                    }
-                })
-                .catch(() => {
-                    targetElement.innerHTML = '<div class="ticker-item">Feed unavailable</div>';
-                });
-        });
+    let proxyIndex = 0;
+    
+    function tryFetch() {
+        if (proxyIndex >= corsProxies.length) {
+            targetElement.innerHTML = '<div class="ticker-item">Feed unavailable</div>';
+            return;
+        }
+        
+        const proxyUrl = corsProxies[proxyIndex++];
+        fetch(proxyUrl(url))
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok' && data.items?.length > 0) {
+                    targetElement.innerHTML = renderArticles(data.items.slice(0, 5), data.feed?.title || '', 0);
+                } else {
+                    tryFetch();
+                }
+            })
+            .catch(() => tryFetch());
+    }
+    
+    tryFetch();
 }
 
 function startSignage() {
