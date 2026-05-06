@@ -106,14 +106,40 @@ function startCycling(items, source, targetElement, intervalMs = CYCLE_MS) {
 }
 
 async function loadFirstWorkingFeed(feeds, targetElement) {
+    if (!targetElement) return null;
+    
+    const allItems = [];
+    let feedTitle = '';
+    
     for (const url of feeds) {
         try {
-            const { items, source } = await fetchRSS(url, targetElement);
-            startCycling(items, source, targetElement);
-            return;
+            const { items, source } = await fetchRSS(url, null);
+            if (items && items.length > 0) {
+                if (!feedTitle && source) feedTitle = source;
+                allItems.push(...items.map(item => ({ ...item, source })));
+            }
         } catch {
             continue;
         }
+    }
+    
+    if (allItems.length > 0) {
+        const shuffled = allItems.sort(() => Math.random() - 0.5);
+        targetElement.innerHTML = renderArticles(shuffled, feedTitle, 0);
+        if (shuffled.length > VISIBLE_COUNT) {
+            return startCycling(shuffled, feedTitle, targetElement);
+        }
+    }
+    return null;
+}
+
+async function fetchRSS(url, targetElement) {
+    const { items, source } = await fetchFeed(url);
+    if (targetElement) {
+        targetElement.innerHTML = renderArticles(items, source, 0);
+    }
+    return { items, source };
+}
     }
 }
 
