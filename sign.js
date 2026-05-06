@@ -17,34 +17,48 @@ function addProxy(url) {
     return `https://api.rss2json.com/v1/api.json?apikey=${RSS2JSON_KEY}&rss_url=${encodeURIComponent(url)}`;
 }
 
-async function fetchCustomFeed(url) {
-    try {
-        const proxyUrl = `https://api.rss2json.com/v1/api.json?apikey=${RSS2JSON_KEY}&rss_url=${encodeURIComponent(url)}`;
-        const response = await fetch(proxyUrl);
-        if (response.ok) {
-            const data = await response.json();
-            if (data.status === "ok") return data;
-        }
-    } catch {}
+const PROXY_OPTIONS = [
+    (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    (url) => `https://api.rss2json.com/v1/api.json?apikey=${RSS2JSON_KEY}&rss_url=${encodeURIComponent(url)}`,
+];
 
-    const googleProxy = `https://ajax.googleapis.com/ajax/services/feed/load?v=1.0&num=10&q=${encodeURIComponent(url)}&fields=feed/entry(title,link,description,publishedDate)`;
-    const response = await fetch(googleProxy);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    
-    const googleData = await response.json();
-    if (googleData.responseStatus !== 200) throw new Error("Google proxy failed");
-    
-    const entries = googleData.responseData?.feed?.entries || [];
-    return {
-        status: "ok",
-        items: entries.map(e => ({
-            title: e.title || "",
-            link: e.link || "",
-            description: e.contentSnippet || e.content || "",
-            pubDate: e.publishedDate || ""
-        })),
-        feed: { title: googleData.responseData?.feed?.title || "" }
-    };
+async function fetchCustomFeed(url) {
+    for (const proxyFn of PROXY_OPTIONS) {
+        try {
+            const proxyUrl = proxyFn(url);
+            const response = await fetch(proxyUrl);
+            if (!response.ok) continue;
+            
+            const text = await response.text();
+            
+            if (proxyFn === PROXY_OPTIONS[2]) {
+                const data = JSON.parse(text);
+                if (data.status === "ok") return data;
+            } else {
+                if (text.includes("<rss") || text.includes("<feed")) {
+                    const parser = new DOMParser();
+                    const xml = parser.parseFromString(text, "text/xml");
+                    const items = xml.querySelectorAll("item, entry");
+                    if (items.length > 0) {
+                        return {
+                            status: "ok",
+                            items: Array.from(items).slice(0, 10).map(item => ({
+                                title: item.querySelector("title")?.textContent || "",
+                                link: item.querySelector("link")?.textContent || "",
+                                description: item.querySelector("description, summary, content")?.textContent || "",
+                                pubDate: item.querySelector("pubDate, published")?.textContent || ""
+                            })),
+                            feed: { title: xml.querySelector("channel > title, feed > title")?.textContent || "" }
+                        };
+                    }
+                }
+            }
+        } catch {
+            continue;
+        }
+    }
+    throw new Error("All proxies failed");
 }
 
 function formatTime(date, timezone) {
