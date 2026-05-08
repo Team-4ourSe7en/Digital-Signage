@@ -29,3 +29,15 @@ The image loading is still very slow and inconsistent. Let's revert it and leave
 
 ## Prompt 10
 Can you include our prompts in a folder in our branch please?
+
+## Prompt 11
+The prompts folder is currently incorrect. Can you include every prompt from the start of this session and push it to main?
+
+## Prompt 12
+We seem to be operating in the Thematic repo, but this work was done in Digital Signage
+
+## Prompt 13
+thanks. can we uncommit any changes made to thematic?
+
+## Prompt 14
+Now can we update the prompts folder in Digital Signage to include every prompt from this session?
