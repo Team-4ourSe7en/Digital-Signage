@@ -2,7 +2,7 @@
 
 ## Overview
 
-A dynamic digital signage widget displaying real-time weather forecasts, news headlines, market updates, and custom RSS feeds. Features a cyberpunk-themed UI with auto-rotating content.
+A dynamic digital signage widget featuring real-time clock, weather forecast, combined news feed with summaries, and custom RSS functionality. Styled with a cyberpunk theme.
 
 ---
 
@@ -82,20 +82,34 @@ A dynamic digital signage widget displaying real-time weather forecasts, news he
 }
 ```
 
-**Rate Limit:** Free tier has limits; premium available
+**Rate Limit:** Free tier has limits; some feeds may return 429 or 422 errors.
 
 **Documentation:** https://rss2json.com/docs
 
 ---
 
-### Default RSS Feeds
+### Default News Feeds
+
+The News section combines multiple RSS feeds for variety:
 
 | Feed Name | URL | Content |
 |-----------|-----|---------|
 | NPR News | `https://feeds.npr.org/1001/rss.xml` | National/international news |
 | BBC News | `https://feeds.bbci.co.uk/news/rss.xml` | World news |
-| Investing.com | `https://www.investing.com/rss/news_25.rss` | Market news |
+| Investing.com | `https://www.investing.com/rss/news_25.rss` | Stock market news |
 | Yahoo Finance | `https://finance.yahoo.com/news/rss` | Financial news |
+
+All feeds are combined, shuffled, and displayed together.
+
+---
+
+### Preset RSS Feeds (Featured Section)
+
+| Button | URL | Status |
+|--------|-----|--------|
+| BBC News | `https://feeds.bbci.co.uk/news/rss.xml` | ✅ Works |
+| NPR | `https://feeds.npr.org/1001/rss.xml` | ✅ Works |
+| Al Jazeera | `https://www.aljazeera.com/xml/rss.xml` | ⚠️ May be rate-limited |
 
 ---
 
@@ -171,7 +185,7 @@ Transforms raw API data into day objects.
 ---
 
 #### `renderCurrent(currentTempF)`
-Generates HTML for current temperature display.
+Generates HTML for current temperature display in header.
 
 **Parameters:**
 - `currentTempF` (number|null): Temperature in Fahrenheit
@@ -268,17 +282,18 @@ Formats publication date as relative time.
 ---
 
 #### `buildArticleHTML(item, index, source)`
-Generates HTML for article display with styling.
+Generates HTML for article display with summary.
 
 **Parameters:**
-- `item` (Object): Article with `title`, `link`, `pubDate`
-- `index` (number): Article number (1-3)
+- `item` (Object): Article with `title`, `link`, `pubDate`, `description`, `content`, `source`
+- `index` (number): Article number (1-5)
 - `source` (string): Feed source name
 
 **Returns:** `string` - HTML anchor element with:
 - Number badge (e.g., "01")
 - Title
 - Source label + time ago meta
+- Article summary (up to 180 chars)
 
 ---
 
@@ -307,11 +322,11 @@ Fetches and parses RSS feed via proxy.
 ---
 
 #### `fetchRSS(url, targetElement)`
-Fetches feed and renders to DOM element.
+Fetches feed and optionally renders to DOM element.
 
 **Parameters:**
 - `url` (string): RSS feed URL
-- `targetElement` (HTMLElement): Container element
+- `targetElement` (HTMLElement|null): Container element (optional)
 
 **Returns:** `Promise<Object>` - `{ items, source }`
 
@@ -331,7 +346,7 @@ Starts auto-cycling of visible articles.
 ---
 
 #### `loadFirstWorkingFeed(feeds, targetElement)`
-Tries feeds in order until one succeeds.
+Combines all feeds, shuffles, and displays. Falls through feeds until all items collected.
 
 **Parameters:**
 - `feeds` (Array): Array of RSS feed URLs
@@ -340,13 +355,13 @@ Tries feeds in order until one succeeds.
 ---
 
 #### `loadCustomFeed(url, targetElement)`
-Loads custom RSS feed with proxy fallback.
+Loads custom RSS feed to Featured section.
 
 **Parameters:**
 - `url` (string): RSS feed URL
 - `targetElement` (HTMLElement): Container element
 
-**Note:** Falls back through multiple CORS proxies. Requires local server for full functionality.
+**Note:** May fail with rate-limited feeds
 
 ---
 
@@ -356,8 +371,7 @@ Initializes all components on page load.
 **Updates:**
 - Clock: Every second
 - Date: Every hour
-- News feed: First working feed from NEWS_FEEDS
-- Markets feed: First working feed from MARKET_FEEDS
+- News feed: Combined and shuffled from all NEWS_FEEDS
 - Featured section: User input or preset buttons
 
 ---
@@ -367,9 +381,8 @@ Initializes all components on page load.
 | Constant | Value | Description |
 |----------|-------|-------------|
 | `RSS2JSON_KEY` | `"wuw4rxqjg1nthslkkjckgnvuewudnbe0robixltc"` | rss2json API key |
-| `NEWS_FEEDS` | NPR, BBC URLs | News RSS sources |
-| `MARKET_FEEDS` | Investing, Yahoo URLs | Market RSS sources |
-| `VISIBLE_COUNT` | `3` | Articles shown at once |
+| `NEWS_FEEDS` | [NPR, BBC, Investing, Yahoo] | Combined news sources |
+| `VISIBLE_COUNT` | `5` | Articles shown at once |
 | `CYCLE_MS` | `20000` | Article rotation interval (20 sec) |
 | `DAY_NAMES` | `["Sun", "Mon", ...]` | Day abbreviations |
 | `CARDINALS` | `["N", "NE", "E", ...]` | Wind direction labels |
@@ -385,11 +398,10 @@ Initializes all components on page load.
 | `timezoneSelection` | Header (time-card) | Timezone selector |
 | `weather-display` | Header (info-bar) | Current temperature |
 | `weather-forecast` | Header (forecast) | Full weather widget |
-| `newsFeed` | Main (ticker-wrapper-news) | News articles |
-| `marketFeed` | Main (ticker-wrapper-market) | Market articles |
-| `customFeed` | Main (ticker-wrapper-custom) | Custom RSS/Featured |
+| `newsFeed` | Main (ticker-wrapper-news) | Combined news articles |
 | `customRssUrl` | Featured section | RSS URL input |
 | `loadCustomFeed` | Featured section | Load button |
+| `customFeed` | Featured section | Custom feed display |
 | `.preset-btn` | Featured section | Quick feed buttons |
 
 ---
@@ -400,7 +412,6 @@ Initializes all components on page load.
 | Class | Description |
 |-------|-------------|
 | `.grid-bg` | Cyberpunk grid background with glow effects |
-| `.header-container` | Not used (now uses `.time-card` + `.forecast`) |
 | `.time-card` | Clock/date container with corner brackets |
 | `.forecast` | Weather widget container |
 
@@ -434,6 +445,7 @@ Initializes all components on page load.
 | `.news-source` | Feed source label (cyan) |
 | `.news-divider` | Separator dot |
 | `.news-time` | Relative time (amber) |
+| `.article-summary` | Article description text |
 
 ### Custom Feed
 | Class | Description |
@@ -443,13 +455,12 @@ Initializes all components on page load.
 | `.custom-rss-btn` | Load button |
 | `.feed-presets` | Preset buttons container |
 | `.preset-btn` | Individual preset button |
-| `.demo-note` | Server requirement note |
 
 ### Card Styling
 | Class | Description |
 |-------|-------------|
 | `.card-corners` | Corner bracket decoration |
-| `.section-title` | Section header (e.g., "News") |
+| `.section-title` | Section header (e.g., "News", "Featured") |
 | `.ticker-track` | Article container |
 
 ---
@@ -478,19 +489,26 @@ Initializes all components on page load.
 
 ---
 
-## Local Server Setup (Optional)
+## Demo Notes
 
-For full custom RSS functionality, run a local server:
+### Running the Demo
 
-```bash
-npm run server
-```
+1. Start local server: `npx serve . -p 8080`
+2. Open: `http://localhost:8080/sign.html`
 
-Or with Python:
-```bash
-python -m http.server 8080
-```
+### Working Features
 
-Access at: `http://localhost:8080/sign.html`
+- ✅ Clock with timezone switching
+- ✅ Weather widget (Denver, auto-refreshes every 10 min)
+- ✅ News section (5 articles, shuffled from 4 sources)
+- ✅ Article summaries (clicking optional)
+- ✅ Featured section with preset buttons (BBC, NPR, Al Jazeera)
+- ✅ Custom URL input (may be rate-limited)
 
-Without server, custom URL input has limited functionality due to CORS restrictions.
+### Demo Flow
+
+1. Show clock/date with timezone selector
+2. Show weather widget with 7-day forecast
+3. Show News section with shuffled articles from multiple sources
+4. Click preset buttons in Featured section
+5. Optionally enter custom RSS URL in input field

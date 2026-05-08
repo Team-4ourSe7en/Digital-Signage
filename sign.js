@@ -51,7 +51,7 @@ function buildArticleHTML(item, index, source) {
     if (sourceLabel) metaParts.push(`<span class="news-source">${sourceLabel}</span>`);
     if (timeAgo) metaParts.push(`<span class="news-time">${timeAgo}</span>`);
     const meta = metaParts.join(`<span class="news-divider">·</span>`);
-    
+
     const description = item.description || item.content || '';
     const cleanDesc = description.replace(/<[^>]*>/g, '').trim();
     const summary = cleanDesc.length > 0 ? `<p class="article-summary">${cleanDesc.substring(0, 180)}${cleanDesc.length > 180 ? '...' : ''}</p>` : '';
